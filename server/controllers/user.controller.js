@@ -12,20 +12,16 @@ const secretKey = process.env.JWT_SECRET_KEY;
 /* Controladores Basicos CRUD */
 module.exports.createUser = async (req, res) => {
     try {
-        console.log("Creating user with data:", req.body);
         const newUser = await User.create(req.body);
-        console.log("User created successfully:", newUser);
         const emailResponse = await sendConfirmationEmail(req.body);
-        console.log("Confirmation email sent:", emailResponse);
+        console.log(emailResponse);
         res.status(200);
         res.json(newUser);
     } catch (error) {
-        console.error("Error creating user:", error);
         res.status(500);
         res.json(error);
     }
 };
-
 module.exports.findAllUsers = async (req, res) => {
     try {
         const users = await User.find();
@@ -216,9 +212,17 @@ module.exports.passwordReset = async (req, res) => {
             res.json({ error: "Invalid Token" });
             return;
         }
+        
+        /* Encripta la nueva contraseña */
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         /* Actualizacion de contraseña */
-        const userPatch = await User.findOneAndUpdate({ email: email }, data, { new: true, runValidators: true });
+        const userPatch = await User.findOneAndUpdate(
+            { email: email }, 
+            { password: hashedPassword }, 
+            { new: true, runValidators: true }
+        );
+        
        /* Quema el token ( lo vuelve inválido) */
         const tokenPatch = await PasswordToken.findOneAndUpdate({ user: user._id }, { valid: false }, { new: true, runValidators: true });
         console.log(tokenPatch);
